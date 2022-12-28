@@ -24,7 +24,7 @@ twitch-videoad.js text/javascript
             e.stopPropagation();
             e.stopImmediatePropagation();
             //This corrects the background tab buffer bug when switching to the background tab for the first time after an extended period.
-            doTwitchPlayerTask(false, false, true, false, false);
+            doTwitchPlayerTask(false, false, true, false, false, false);
         };
         document.addEventListener('visibilitychange', block, true);
         document.addEventListener('webkitvisibilitychange', block, true);
@@ -85,6 +85,7 @@ twitch-videoad.js text/javascript
     var twitchMainWorker = null;
     var adBlockDiv = null;
     var OriginalVideoPlayerQuality = null;
+    var OriginalVideoPlayerLowLatency = null;
     var IsPlayerAutoQuality = null;
     const oldWorker = window.Worker;
     window.Worker = class Worker extends oldWorker {
@@ -138,40 +139,46 @@ twitch-videoad.js text/javascript
                     if (adBlockDiv == null) {
                         adBlockDiv = getAdBlockDiv();
                     }
-                    adBlockDiv.P.textContent = 'Blocking ads...';
+                    adBlockDiv.P.textContent = 'Blocking ads';
                     adBlockDiv.style.display = 'block';
+                    console.log('ShowAdBlockBanner');
                 } else if (e.data.key == 'HideAdBlockBanner') {
                     if (adBlockDiv == null) {
                         adBlockDiv = getAdBlockDiv();
                     }
                     adBlockDiv.style.display = 'none';
+                    console.log('HideAdBlockBanner');
                 } else if (e.data.key == 'PauseResumePlayer') {
-                    doTwitchPlayerTask(true, false, false, false, false);
+                    doTwitchPlayerTask(true, false, false, false, false, false);
+                    console.log('PauseResumePlayer');
                 } else if (e.data.key == 'ForceChangeQuality') {
                     //This is used to fix the bug where the video would freeze.
+                    console.log('ForceChangeQuality');
                     try {
                         if (navigator.userAgent.toLowerCase().indexOf('firefox') == -1) {
                             return;
                         }
-                        var autoQuality = doTwitchPlayerTask(false, false, false, true, false);
-                        var currentQuality = doTwitchPlayerTask(false, true, false, false, false);
+                        var autoQuality = doTwitchPlayerTask(false, false, false, true, false, false);
+                        var currentQuality = doTwitchPlayerTask(false, true, false, false, false, false);
+                        var currentLowLatency = doTwitchPlayerTask(false, false, false, false, false, true);
                         if (IsPlayerAutoQuality == null) {
                             IsPlayerAutoQuality = autoQuality;
                         }
                         if (OriginalVideoPlayerQuality == null) {
                             OriginalVideoPlayerQuality = currentQuality;
                         }
-                        if (!currentQuality.includes('480') || e.data.value != null) {
-                            if (!OriginalVideoPlayerQuality.includes('480')) {
-                                var settingsMenu = document.querySelector('div[data-a-target="player-settings-menu"]');
-                                if (settingsMenu == null) {
-                                    var settingsCog = document.querySelector('button[data-a-target="player-settings-button"]');
-                                    if (settingsCog) {
-                                        settingsCog.click();
-                                        var qualityMenu = document.querySelector('button[data-a-target="player-settings-menu-item-quality"]');
-                                        if (qualityMenu) {
-                                            qualityMenu.click();
-                                        }
+                        if (OriginalVideoPlayerLowLatency == null) {
+                            OriginalVideoPlayerLowLatency = currentLowLatency;
+                        }
+                        var settingsCog = document.querySelector('button[data-a-target="player-settings-button"]');
+                        if (settingsCog) {
+                            if (!currentQuality.includes('480') || e.data.value != null) {
+                                if (!OriginalVideoPlayerQuality.includes('480')) {
+                                    console.log('Change quality');
+                                    settingsCog.click();
+                                    var qualityMenu = document.querySelector('button[data-a-target="player-settings-menu-item-quality"]');
+                                    if (qualityMenu) {
+                                        qualityMenu.click();
                                         var lowQuality = document.querySelectorAll('input[data-a-target="tw-radio"');
                                         if (lowQuality) {
                                             var qualityToSelect = lowQuality.length - 3;
@@ -222,19 +229,41 @@ twitch-videoad.js text/javascript
                                             var currentQualityLS = window.localStorage.getItem('video-quality');
                                             lowQuality[qualityToSelect].click();
                                             window.localStorage.setItem('video-quality', currentQualityLS);
-                                            if (e.data.value != null) {
-                                                OriginalVideoPlayerQuality = null;
-                                                IsPlayerAutoQuality = null;
-                                                doTwitchPlayerTask(false, false, false, true, true);
-                                            }
                                         }
-                                    }
+                                    }            
+                                    settingsCog.click();
                                 }
                             }
+                            var latencyToSelect = false;        
+                            if (e.data.value != null) {
+                                latencyToSelect = OriginalVideoPlayerLowLatency;
+                            }   
+                            if(latencyToSelect != currentLowLatency) {
+                                console.log('Change low latency');
+                                settingsCog.click();
+                                var advancedmenu = document.querySelector('button[data-a-target="player-settings-menu-item-advanced"]');
+                                if (advancedmenu) {
+                                    advancedmenu.click();
+                                    var lltoggle = document.querySelectorAll('input[data-a-target="tw-toggle"');
+                                    if (lltoggle) {
+                                        var currentllLS = window.localStorage.getItem('lowLatencyModeEnabled');
+                                        lltoggle[0].click();
+                                        window.localStorage.setItem('lowLatencyModeEnabled', currentllLS);
+                                    }                                       
+                                }
+                                settingsCog.click();                                       
+                            }
+                        }
+                        if (e.data.value != null) {
+                            OriginalVideoPlayerQuality = null;
+                            IsPlayerAutoQuality = null;
+                            OriginalVideoPlayerLowLatency = null;
+                            //doTwitchPlayerTask(false, false, false, true, true, false);
                         }
                     } catch (err) {
                         OriginalVideoPlayerQuality = null;
                         IsPlayerAutoQuality = null;
+                        OriginalVideoPlayerLowLatency = null;
                     }
                 }
             };
@@ -274,13 +303,7 @@ twitch-videoad.js text/javascript
                             //Here we check the m3u8 for any ads and also try fallback player types if needed.
                             var responseText = await response.text();
                             var weaverText = null;
-                            weaverText = await processM3U8(url, responseText, realFetch, PlayerType2);
-                            if (weaverText.includes(AdSignifier)) {
-                                weaverText = await processM3U8(url, responseText, realFetch, PlayerType3);
-                            }
-                            if (weaverText.includes(AdSignifier)) {
-                                weaverText = await processM3U8(url, responseText, realFetch, PlayerType4);
-                            }
+                            weaverText = await processM3U8(url, responseText, realFetch, PlayerType4);
                             resolve(new Response(weaverText));
                         };
                         var send = function() {
@@ -425,13 +448,15 @@ twitch-videoad.js text/javascript
         var streamM3u8Response = await realFetch(streamM3u8Url);
         if (streamM3u8Response.status == 200) {
             var m3u8Text = await streamM3u8Response.text();
-            WasShowingAd = true;
-            postMessage({
-                key: 'ShowAdBlockBanner'
-            });
-            postMessage({
-                key: 'ForceChangeQuality'
-            });
+            if (!WasShowingAd) {
+                WasShowingAd = true;
+                postMessage({
+                    key: 'ShowAdBlockBanner'
+                });
+                postMessage({
+                    key: 'ForceChangeQuality'
+                });
+            }
             if (!m3u8Text || m3u8Text.includes(AdSignifier)) {
                 streamInfo.EncodingsM3U8Cache[playerType].Value = null;
             }
@@ -676,7 +701,7 @@ twitch-videoad.js text/javascript
             }
         });
     }
-    function doTwitchPlayerTask(isPausePlay, isCheckQuality, isCorrectBuffer, isAutoQuality, setAutoQuality) {
+    function doTwitchPlayerTask(isPausePlay, isCheckQuality, isCorrectBuffer, isAutoQuality, setAutoQuality, isCheckLatency) {
         //This will do an instant pause/play to return to original quality once the ad is finished.
         //We also use this function to get the current video player quality set by the user.
         //We also use this function to quickly pause/play the player when switching tabs to stop delays.
@@ -735,6 +760,17 @@ twitch-videoad.js text/javascript
             if (setAutoQuality) {
                 videoPlayer.setAutoQualityMode(true);
                 return;
+            }
+            if (isCheckLatency) {
+                if (typeof videoPlayer.isLiveLowLatency() == 'undefined') {
+                    return false;
+                }
+                if (videoPlayer.isLiveLowLatency()) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
             }
             //This only happens when switching tabs and is to correct the high latency caused when opening background tabs and going to them at a later time.
             //We check that this is a live stream by the page URL, to prevent vod/clip pause/plays.
