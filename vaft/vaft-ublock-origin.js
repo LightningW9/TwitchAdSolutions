@@ -453,15 +453,13 @@ twitch-videoad.js text/javascript
         var streamM3u8Response = await realFetch(streamM3u8Url);
         if (streamM3u8Response.status == 200) {
             var m3u8Text = await streamM3u8Response.text();
-            if (!WasShowingAd) {
-                WasShowingAd = true;
-                postMessage({
-                    key: 'ShowAdBlockBanner'
-                });
-                postMessage({
-                    key: 'ForceChangeQuality'
-                });
-            }
+            WasShowingAd = true;
+            postMessage({
+                key: 'ShowAdBlockBanner'
+            });
+            postMessage({
+                key: 'ForceChangeQuality'
+            });
             if (!m3u8Text || m3u8Text.includes(AdSignifier)) {
                 streamInfo.EncodingsM3U8Cache[playerType].Value = null;
             }
