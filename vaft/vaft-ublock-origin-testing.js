@@ -155,8 +155,11 @@ twitch-videoad.js text/javascript
                     adBlockDiv.style.display = 'none';
                     console.log('HideAdBlockBanner');
                 } else if (e.data.key == 'PauseResumePlayer') {
-                    doTwitchPlayerTask(true, false, false, false, false, false);
                     console.log('PauseResumePlayer');
+                    doTwitchPlayerTask(false, false, false, false, false, false);
+                } else if (e.data.key == 'CorrectBuffer') {
+                    console.log('CorrectBuffer');
+                    doTwitchPlayerTask(true, false, true, false, false, false);
                 } else if (e.data.key == 'ForceChangeQuality') {
                     //This is used to fix the bug where the video would freeze.
                     console.log('ForceChangeQuality');
@@ -595,6 +598,9 @@ twitch-videoad.js text/javascript
                 });
                 postMessage({
                     key: 'HideAdBlockBanner'
+                });
+                postMessage({
+                    key: 'CorrectBuffer'
                 });
             }
             return textStr;
