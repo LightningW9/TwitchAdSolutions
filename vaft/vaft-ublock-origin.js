@@ -23,12 +23,13 @@ twitch-videoad.js text/javascript
             e.stopPropagation();
             e.stopImmediatePropagation();
             //This corrects the background tab buffer bug when switching to the background tab for the first time after an extended period.
+            console.log('Process');
             doTwitchPlayerTask(false, false, true, false, false, false);
         };
         document.addEventListener('visibilitychange', block, true);
         document.addEventListener('webkitvisibilitychange', block, true);
         document.addEventListener('mozvisibilitychange', block, true);
-        document.addEventListener('hasFocus', block, true);
+        document.addEventListener('hasFocus', process, true);
         if (/Firefox/.test(navigator.userAgent)) {
             Object.defineProperty(document, 'mozHidden', {
                 get() {
@@ -181,9 +182,11 @@ twitch-videoad.js text/javascript
                                 if (!OriginalVideoPlayerQuality.includes('480')) {
                                     console.log('Change quality');
                                     settingsCog.click();
+                                    console.log('Settings open');
                                     var qualityMenu = document.querySelector('button[data-a-target="player-settings-menu-item-quality"]');
                                     if (qualityMenu) {
                                         qualityMenu.click();
+                                        console.log('Quality open');
                                         var lowQuality = document.querySelectorAll('input[data-a-target="tw-radio"');
                                         if (lowQuality) {
                                             var qualityToSelect = lowQuality.length - 3;
@@ -233,10 +236,12 @@ twitch-videoad.js text/javascript
                                             }
                                             var currentQualityLS = window.localStorage.getItem('video-quality');
                                             lowQuality[qualityToSelect].click();
+                                            console.log(`Quality select:${qualityToSelect}`);
                                             window.localStorage.setItem('video-quality', currentQualityLS);
                                         }
                                     }            
                                     settingsCog.click();
+                                    console.log('Settings close');
                                 }
                             }
                             var latencyToSelect = false;        
@@ -246,17 +251,21 @@ twitch-videoad.js text/javascript
                             if(latencyToSelect != currentLowLatency) {
                                 console.log('Change low latency');
                                 settingsCog.click();
+                                console.log('Settings open');
                                 var advancedmenu = document.querySelector('button[data-a-target="player-settings-menu-item-advanced"]');
                                 if (advancedmenu) {
                                     advancedmenu.click();
+                                    console.log('Advanced open');
                                     var lltoggle = document.querySelectorAll('input[data-a-target="tw-toggle"');
                                     if (lltoggle) {
                                         var currentllLS = window.localStorage.getItem('lowLatencyModeEnabled');
                                         lltoggle[0].click();
+                                        console.log('Low latency select');
                                         window.localStorage.setItem('lowLatencyModeEnabled', currentllLS);
                                     }                                       
                                 }
-                                settingsCog.click();                                       
+                                settingsCog.click();
+                                console.log('Settings close');
                             }
                         }
                         if (e.data.value != null) {
@@ -808,10 +817,17 @@ twitch-videoad.js text/javascript
                     setTimeout(function() {
                         //If latency to broadcaster is above 5 or 15 seconds upon switching tabs, we pause and play the player to reset the latency.
                         //If latency is between 0-6, user can manually pause and resume to reset latency further.
+                        var avgbitrate = videoPlayer.getAverageBitrate();
+                        var bitrate = videoPlayer.getVideoBitRate();
+                        console.log(`Check bitrate (Average:${avgbitrate}, Video:${bitrate})`);
+  
                         if (videoPlayer.isLiveLowLatency() && videoPlayer.getLiveLatency() > 5) {
                             videoPlayer.pause();
                             videoPlayer.play();
                         } else if (videoPlayer.getLiveLatency() > 15) {
+                            videoPlayer.pause();
+                            videoPlayer.play();
+                        } else if (bitrate < 10) {
                             videoPlayer.pause();
                             videoPlayer.play();
                         }
