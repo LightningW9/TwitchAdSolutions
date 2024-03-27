@@ -773,12 +773,10 @@ twitch-videoad.js text/javascript
                 return;
             }
             if (isCheckLatency) {
-                
-                //var avgbitrate = videoPlayer.getAverageBitrate();
-                //var vbitrate = videoPlayer.getVideoBitRate();
-                var pbrate = videoPlayer.getPlaybackRate();
-                //console.log(`Check bitrate Average:${avgbitrate}, Video:${vbitrate}, Playback:${pbrate}`);
-                
+                if (typeof videoPlayer.getPlaybackRate() != 'undefined') {
+                    var pbrate = videoPlayer.getPlaybackRate();
+                    console.log(`Check bitrate Playback:${pbrate}`);
+                }
                 if (typeof videoPlayer.isLiveLowLatency() == 'undefined') {
                     return false;
                 }
