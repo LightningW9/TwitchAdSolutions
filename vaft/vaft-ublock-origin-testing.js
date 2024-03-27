@@ -26,9 +26,9 @@ twitch-videoad.js text/javascript
             console.log('Process');
             doTwitchPlayerTask(false, false, true, false, false, false);
         };
-        document.addEventListener('visibilitychange', block, true);
-        document.addEventListener('webkitvisibilitychange', block, true);
-        document.addEventListener('mozvisibilitychange', block, true);
+        document.addEventListener('visibilitychange', process, true);
+        document.addEventListener('webkitvisibilitychange', process, true);
+        document.addEventListener('mozvisibilitychange', process, true);
         document.addEventListener('hasFocus', process, true);
         if (/Firefox/.test(navigator.userAgent)) {
             Object.defineProperty(document, 'mozHidden', {
