@@ -156,6 +156,9 @@ twitch-videoad.js text/javascript
                 } else if (e.data.key == 'PauseResumePlayer') {
                     doTwitchPlayerTask(true, false, false, false, false, false);
                     console.log('PauseResumePlayer');
+                } else if (e.data.key == 'CorrectBuffer') {
+                    doTwitchPlayerTask(false, false, true, false, false, false);
+                    console.log('CorrectBuffer');
                 } else if (e.data.key == 'ForceChangeQuality') {
                     //This is used to fix the bug where the video would freeze.
                     console.log('ForceChangeQuality');
@@ -456,10 +459,16 @@ twitch-videoad.js text/javascript
             if (!WasShowingAd) {
                 WasShowingAd = true;
                 postMessage({
-                    key: 'ShowAdBlockBanner'
+                    key: 'ForceChangeQuality'
                 });
                 postMessage({
-                    key: 'ForceChangeQuality'
+                    key: 'PauseResumePlayer'
+                });
+				postMessage({
+                    key: 'ShowAdBlockBanner'
+                });
+				postMessage({
+                    key: 'CorrectBuffer'
                 });
             }
             if (!m3u8Text || m3u8Text.includes(AdSignifier)) {
@@ -588,6 +597,9 @@ twitch-videoad.js text/javascript
                 });
                 postMessage({
                     key: 'HideAdBlockBanner'
+                });
+				postMessage({
+                    key: 'CorrectBuffer'
                 });
             }
             return textStr;
@@ -733,10 +745,24 @@ twitch-videoad.js text/javascript
                 }
                 return null;
             }
-            var reactRootNode = null;
-            var rootNode = document.querySelector('#root');
-            if (rootNode && rootNode._reactRootContainer && rootNode._reactRootContainer._internalRoot && rootNode._reactRootContainer._internalRoot.current) {
-                reactRootNode = rootNode._reactRootContainer._internalRoot.current;
+            function findReactRootNode() {
+                var reactRootNode = null;
+                var rootNode = document.querySelector('#root');
+                if (rootNode && rootNode._reactRootContainer && rootNode._reactRootContainer._internalRoot && rootNode._reactRootContainer._internalRoot.current) {
+                    reactRootNode = rootNode._reactRootContainer._internalRoot.current;
+                }
+                if (reactRootNode == null) {
+                    var containerName = Object.keys(rootNode).find(x => x.startsWith('__reactContainer'));
+                    if (containerName != null) {
+                        reactRootNode = rootNode[containerName];
+                    }
+                }
+                return reactRootNode;
+            }
+            var reactRootNode = findReactRootNode();
+            if (!reactRootNode) {
+                console.log('Could not find react root');
+                return;
             }
             videoPlayer = findReactNode(reactRootNode, node => node.setPlayerActive && node.props && node.props.mediaPlayerInstance);
             videoPlayer = videoPlayer && videoPlayer.props && videoPlayer.props.mediaPlayerInstance ? videoPlayer.props.mediaPlayerInstance : null;
@@ -773,10 +799,6 @@ twitch-videoad.js text/javascript
                 return;
             }
             if (isCheckLatency) {
-                if (typeof videoPlayer.getPlaybackRate() != 'undefined') {
-                    var pbrate = videoPlayer.getPlaybackRate();
-                    console.log(`Check bitrate Playback:${pbrate}`);
-                }
                 if (typeof videoPlayer.isLiveLowLatency() == 'undefined') {
                     return false;
                 }
@@ -800,10 +822,19 @@ twitch-videoad.js text/javascript
                     setTimeout(function() {
                         //If latency to broadcaster is above 5 or 15 seconds upon switching tabs, we pause and play the player to reset the latency.
                         //If latency is between 0-6, user can manually pause and resume to reset latency further.
+						var vbitrate = videoPlayer.getVideoBitRate();
+						var vbuffer = videoPlayer.getBufferDuration();
+						console.log(`Correct Buffer Video:${vbitrate} Buffer:${vbuffer}`);
                         if (videoPlayer.isLiveLowLatency() && videoPlayer.getLiveLatency() > 5) {
                             videoPlayer.pause();
                             videoPlayer.play();
                         } else if (videoPlayer.getLiveLatency() > 15) {
+                            videoPlayer.pause();
+                            videoPlayer.play();
+                        } else if (vbitrate < 10) {
+                            videoPlayer.pause();
+                            videoPlayer.play();
+                        } else if (vbuffer < 0 || vbuffer > 30) {
                             videoPlayer.pause();
                             videoPlayer.play();
                         }
