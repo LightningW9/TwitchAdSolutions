@@ -775,9 +775,8 @@ twitch-videoad.js text/javascript
                 if (typeof videoPlayer.getQuality() == 'undefined') {
                     return;
                 }
-                var testquality = videoPlayer.getQuality();
-                console.log(`Current Quality:${testquality}`);
                 var playerQuality = JSON.stringify(videoPlayer.getQuality());
+                console.log(`Current Quality:${playerQuality}`);
                 if (playerQuality) {
                     return playerQuality;
                 } else {
