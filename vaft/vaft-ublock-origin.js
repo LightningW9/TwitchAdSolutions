@@ -464,10 +464,10 @@ twitch-videoad.js text/javascript
                 postMessage({
                     key: 'PauseResumePlayer'
                 });
-				postMessage({
+                postMessage({
                     key: 'ShowAdBlockBanner'
                 });
-				postMessage({
+                postMessage({
                     key: 'CorrectBuffer'
                 });
             }
@@ -598,7 +598,7 @@ twitch-videoad.js text/javascript
                 postMessage({
                     key: 'HideAdBlockBanner'
                 });
-				postMessage({
+                postMessage({
                     key: 'CorrectBuffer'
                 });
             }
@@ -775,6 +775,8 @@ twitch-videoad.js text/javascript
                 if (typeof videoPlayer.getQuality() == 'undefined') {
                     return;
                 }
+                var testquality = videoPlayer.getQuality();
+                console.log(`Current Quality:${testquality}`);
                 var playerQuality = JSON.stringify(videoPlayer.getQuality());
                 if (playerQuality) {
                     return playerQuality;
@@ -809,8 +811,6 @@ twitch-videoad.js text/javascript
                     return false;
                 }
             }
-            //This only happens when switching tabs and is to correct the high latency caused when opening background tabs and going to them at a later time.
-            //We check that this is a live stream by the page URL, to prevent vod/clip pause/plays.
             try {
                 var currentPageURL = document.URL;
                 var isLive = true;
@@ -818,17 +818,16 @@ twitch-videoad.js text/javascript
                     isLive = false;
                 }
                 if (isCorrectBuffer && isLive) {
-                    //A timer is needed due to the player not resuming without it.
                     setTimeout(function() {
-                        //If latency to broadcaster is above 5 or 15 seconds upon switching tabs, we pause and play the player to reset the latency.
-                        //If latency is between 0-6, user can manually pause and resume to reset latency further.
-						var vbitrate = videoPlayer.getVideoBitRate();
-						var vbuffer = videoPlayer.getBufferDuration();
-						console.log(`Correct Buffer Video:${vbitrate} Buffer:${vbuffer}`);
-                        if (videoPlayer.isLiveLowLatency() && videoPlayer.getLiveLatency() > 5) {
+                        var vbitrate = videoPlayer.getVideoBitRate();
+                        var vbuffer = videoPlayer.getBufferDuration();
+                        var islivell = videoPlayer.isLiveLowLatency();
+                        var livelatency = videoPlayer.getLiveLatency();
+                        console.log(`Correct Buffer Video:${vbitrate} Buffer:${vbuffer}`);
+                        if (islivell && livelatency > 5) {
                             videoPlayer.pause();
                             videoPlayer.play();
-                        } else if (videoPlayer.getLiveLatency() > 15) {
+                        } else if (livelatency > 15) {
                             videoPlayer.pause();
                             videoPlayer.play();
                         } else if (vbitrate < 10) {
